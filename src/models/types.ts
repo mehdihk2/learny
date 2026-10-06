@@ -73,6 +73,8 @@ export interface Task {
   instructions: string;
   resourceType: ResourceType;
   kind: TaskKind;
+  /** What the slot is for (warm-up, practice, exam…). Optional for plans created before v2. */
+  role?: 'warmup' | 'practice' | 'exam' | 'review' | 'milestone' | 'reflection';
 }
 
 export type DayType = 'study' | 'review' | 'milestone';
@@ -169,10 +171,21 @@ export interface PlanEvent {
   detail: string;
 }
 
+export interface SrsCardState {
+  box: number;
+  due: ISODate;
+  reviews: number;
+  lapses: number;
+}
+
 export interface ProgressLog {
   planId: string;
   /** taskId → local date (YYYY-MM-DD) the task was ticked. */
   completedTasks: Record<string, ISODate>;
   milestoneResults: MilestoneResult[];
   events: PlanEvent[];
+  /** exerciseId → best score (0–1). Optional for logs created before v2. */
+  exerciseScores?: Record<string, number>;
+  /** flashcard id → spaced-repetition state. */
+  srs?: Record<string, SrsCardState>;
 }

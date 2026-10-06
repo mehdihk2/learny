@@ -6,6 +6,7 @@ import { navigate } from '../hooks/useHashRoute';
 import { SKILL_LABELS, SKILLS } from '../lib/cefr';
 import { formatDate } from '../lib/dates';
 import { dayCompletion, isTaskDone, phaseProgress } from '../lib/progress';
+import { taskHasExercises } from '../exercises/taskSession';
 import { useActivePlan } from '../state/AppState';
 
 export function PlanView() {
@@ -40,6 +41,7 @@ function PhaseCard({
   onToggle: (id: string) => void;
   result?: { overall: number; passed: boolean };
 }) {
+  const { profile } = useActivePlan();
   const days = phase.weeks.flatMap((w) => w.days);
   const dates = days.map((d) => d.date).sort();
   const pct = Math.round(phaseProgress(phase, progress) * 100);
@@ -127,6 +129,7 @@ function PhaseCard({
                               task={t}
                               done={isTaskDone(progress, t.id)}
                               onToggle={() => onToggle(t.id)}
+                              onPractice={taskHasExercises(t, profile) ? () => navigate(`/practice/${encodeURIComponent(t.id)}`) : undefined}
                               action={
                                 t.kind === 'milestone' ? (
                                   <Button variant="ghost" className="px-0" onClick={() => navigate(`/milestone/${phase.id}`)}>

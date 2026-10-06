@@ -4,6 +4,7 @@ export type Route =
   | { name: 'dashboard' }
   | { name: 'plan' }
   | { name: 'milestone'; phaseId: string }
+  | { name: 'practice'; taskId: string }
   | { name: 'settings' };
 
 export function parseHash(hash: string): Route {
@@ -13,6 +14,8 @@ export function parseHash(hash: string): Route {
       return { name: 'plan' };
     case 'milestone':
       return parts[1] ? { name: 'milestone', phaseId: parts[1] } : { name: 'dashboard' };
+    case 'practice':
+      return parts[1] ? { name: 'practice', taskId: decodeURIComponent(parts[1]) } : { name: 'dashboard' };
     case 'settings':
       return { name: 'settings' };
     default:

@@ -18,6 +18,7 @@ import { todayISO } from '../lib/dates';
 import { checkFeasibility } from '../lib/feasibility';
 import { hasDedicatedPack } from '../content';
 import { useAppState } from '../state/AppState';
+import { useSession } from '../state/Session';
 
 const DURATIONS = [
   { weeks: 2, label: '2 weeks' },
@@ -55,11 +56,12 @@ function nextLevel(level: CefrLevel): CefrLevel {
 
 export function Onboarding() {
   const { createPlan } = useAppState();
+  const { session } = useSession();
   const [step, setStep] = useState(0);
   const [quizOpen, setQuizOpen] = useState(false);
   const [customWeeks, setCustomWeeks] = useState('');
   const [draft, setDraft] = useState<Draft>({
-    name: '',
+    name: session.status === 'account' ? (session.user.name ?? '') : '',
     language: null,
     currentLevel: null,
     levelSource: 'self-assessed',

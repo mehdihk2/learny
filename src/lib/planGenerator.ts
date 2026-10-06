@@ -187,6 +187,7 @@ export function generatePhase(input: PhaseInput): Phase {
         skill: slot.skill,
         minutes: slot.minutes,
         kind: slot.role === 'milestone' ? 'milestone' : slot.role === 'review' ? 'review' : 'practice',
+        role: slot.role,
       };
     });
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Task } from '../models/types';
-import { cx, formatMinutes, Pill, RESOURCE_LABELS, SkillBadge } from './ui';
+import { Button, cx, formatMinutes, Pill, RESOURCE_LABELS, SkillBadge } from './ui';
 
 export function TaskItem({
   task,
@@ -8,6 +8,7 @@ export function TaskItem({
   onToggle,
   action,
   readOnly,
+  onPractice,
 }: {
   task: Task;
   done: boolean;
@@ -15,6 +16,8 @@ export function TaskItem({
   /** Extra action, e.g. "Start test" for milestone tasks. */
   action?: React.ReactNode;
   readOnly?: boolean;
+  /** When set, the task has interactive exercises. */
+  onPractice?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -51,6 +54,13 @@ export function TaskItem({
             </span>
           </button>
           {open && <p className="mt-2 text-sm leading-relaxed text-slate-600">{task.instructions}</p>}
+          {onPractice && (
+            <div className="mt-2">
+              <Button variant={done ? 'secondary' : 'primary'} className="w-full sm:w-auto" onClick={onPractice}>
+                {done ? '🔁 Practise again' : '▶ Start exercises'}
+              </Button>
+            </div>
+          )}
           {action && <div className="mt-2">{action}</div>}
         </div>
         <button

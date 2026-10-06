@@ -6,9 +6,11 @@ import { generatePlan } from '../lib/planGenerator';
 import { emptyProgress, toggleTask as toggleTaskPure } from '../lib/progress';
 import { reschedule as reschedulePure, type RescheduleStrategy } from '../lib/reschedule';
 import { storage as defaultStorage, type StorageAdapter } from '../services/storage';
+import { applyPracticeResults, type PracticeResults } from '../exercises/practice';
 
 interface AppStateValue {
   loading: boolean;
+  loadError: string | null;
   today: string;
   profile: UserProfile | null;
   plan: Plan | null;
@@ -17,6 +19,8 @@ interface AppStateValue {
   toggleTask(taskId: string): void;
   reschedule(strategy: RescheduleStrategy): void;
   submitMilestone(phaseId: string, answers: MilestoneAnswers): MilestoneResult;
+  /** Save the results of an exercise session and tick its task. */
+  recordPractice(taskId: string, results: PracticeResults): void;
   reset(): void;
 }
 
@@ -32,30 +36,40 @@ export function AppStateProvider({ children, storage = defaultStorage }: { child
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [progress, setProgress] = useState<ProgressLog | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const hydrated = useRef(false);
+  // The exact objects that came from storage — no need to save them back.
+  const loaded = useRef<{ profile?: unknown; plan?: unknown; progress?: unknown }>({});
 
   // Load once.
   useEffect(() => {
-    Promise.all([storage.loadProfile(), storage.loadPlan(), storage.loadProgress()]).then(([pr, pl, pg]) => {
-      if (pr && pl) {
-        setProfile(pr);
-        setPlan(pl);
-        setProgress(pg && pg.planId === pl.id ? pg : emptyProgress(pl.id));
-      }
-      hydrated.current = true;
-      setLoading(false);
-    });
+    Promise.all([storage.loadProfile(), storage.loadPlan(), storage.loadProgress()])
+      .then(([pr, pl, pg]) => {
+        if (pr && pl) {
+          const pgOk = pg && pg.planId === pl.id ? pg : emptyProgress(pl.id);
+          loaded.current = { profile: pr, plan: pl, progress: pg === pgOk ? pg : undefined };
+          setProfile(pr);
+          setPlan(pl);
+          setProgress(pgOk);
+        }
+        hydrated.current = true;
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        setLoadError(err instanceof Error ? err.message : 'Could not load your data.');
+        setLoading(false);
+      });
   }, [storage]);
 
   // Persist on change.
   useEffect(() => {
-    if (hydrated.current && profile) void storage.saveProfile(profile);
+    if (hydrated.current && profile && profile !== loaded.current.profile) void storage.saveProfile(profile);
   }, [profile, storage]);
   useEffect(() => {
-    if (hydrated.current && plan) void storage.savePlan(plan);
+    if (hydrated.current && plan && plan !== loaded.current.plan) void storage.savePlan(plan);
   }, [plan, storage]);
   useEffect(() => {
-    if (hydrated.current && progress) void storage.saveProgress(progress);
+    if (hydrated.current && progress && progress !== loaded.current.progress) void storage.saveProgress(progress);
   }, [progress, storage]);
 
   // Keep "today" fresh if the app stays open past midnight.
@@ -128,6 +142,12 @@ export function AppStateProvider({ children, storage = defaultStorage }: { child
     [plan, progress, profile],
   );
 
+  const recordPractice = useCallback(
+    (taskId: string, results: PracticeResults) =>
+      setProgress((prev) => (prev ? applyPracticeResults(prev, taskId, results, todayISO()) : prev)),
+    [],
+  );
+
   const reset = useCallback(() => {
     void storage.clear();
     setProfile(null);
@@ -136,8 +156,8 @@ export function AppStateProvider({ children, storage = defaultStorage }: { child
   }, [storage]);
 
   const value = useMemo<AppStateValue>(
-    () => ({ loading, today, profile, plan, progress, createPlan, toggleTask, reschedule, submitMilestone, reset }),
-    [loading, today, profile, plan, progress, createPlan, toggleTask, reschedule, submitMilestone, reset],
+    () => ({ loading, loadError, today, profile, plan, progress, createPlan, toggleTask, reschedule, submitMilestone, recordPractice, reset }),
+    [loading, loadError, today, profile, plan, progress, createPlan, toggleTask, reschedule, submitMilestone, recordPractice, reset],
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

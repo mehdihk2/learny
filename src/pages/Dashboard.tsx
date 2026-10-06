@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { CalendarView } from '../components/CalendarView';
+import { PracticeStatsCard } from '../components/PracticeStatsCard';
 import { RescheduleBanner } from '../components/RescheduleBanner';
 import { TaskItem } from '../components/TaskItem';
 import { Button, Card, CardTitle, formatMinutes, ProgressBar } from '../components/ui';
@@ -16,12 +17,15 @@ import {
   planStats,
   upcomingMilestones,
 } from '../lib/progress';
+import { taskHasExercises } from '../exercises/taskSession';
 import { useActivePlan } from '../state/AppState';
+import { useSession } from '../state/Session';
 
 const CHEERS = ['You showed up — that\'s what counts.', 'Small steps, big results.', 'Your future self says thanks!', 'Consistency is your superpower.'];
 
 export function Dashboard() {
   const { plan, progress, profile, today, toggleTask, reschedule } = useActivePlan();
+  const { session } = useSession();
 
   const stats = useMemo(() => planStats(plan, progress), [plan, progress]);
   const level = useMemo(() => estimatedLevel(plan, progress, profile.currentLevel), [plan, progress, profile.currentLevel]);
@@ -114,6 +118,7 @@ export function Dashboard() {
                       task={t}
                       done={isTaskDone(progress, t.id)}
                       onToggle={() => toggleTask(t.id)}
+                      onPractice={taskHasExercises(t, profile) ? () => navigate(`/practice/${encodeURIComponent(t.id)}`) : undefined}
                       action={
                         t.kind === 'milestone' && p ? (
                           <Button className="w-full sm:w-auto" onClick={() => navigate(`/milestone/${p.id}`)}>
@@ -170,6 +175,8 @@ export function Dashboard() {
               </p>
             )}
           </Card>
+
+          <PracticeStatsCard online={session.status === 'account'} profile={profile} progress={progress} />
 
           <Card>
             <CardTitle>Calendar</CardTitle>
